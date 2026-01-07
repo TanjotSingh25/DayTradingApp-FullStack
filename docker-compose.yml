@@ -1,48 +1,34 @@
 version: "3.8"
 
 services:
-    auth-service:
-        build:
-            context: ./AuthenticationService
-            dockerfile: Dockerfile
-        container_name: auth-service
-        ports:
-            - "8080:8080"
-        depends_on:
-            - mongodb
-        environment:
-            - MONGO_URI=mongodb://mongodb:27017
-        networks:
-            - backend
+  auth-service:
+    build:
+      context: ./AuthenticationService
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+    networks:
+      - backend
 
-    user-account-service:
-        build:
-            context: ./UserAccountService
-            dockerfile: Dockerfile
-        container_name: user-account-service
-        ports:
-            - "8081:8081"
-        depends_on:
-            - mongodb
-        environment:
-            - MONGO_URI=mongodb://mongodb:27017
-        networks:
-            - backend
-
-    mongodb:
-        image: mongo:latest
-        container_name: mongodb
-        restart: always
-        ports:
-            - "27018:27017"
-        volumes:
-            - mongo_data:/data/db
-        networks:
-            - backend
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - backend
 
 volumes:
-    mongo_data:
+  mongo_data:
 
 networks:
-    backend:
-        driver: bridge
+  backend:
+    driver: bridge

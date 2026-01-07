@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"errors"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
@@ -35,6 +37,45 @@ type Claims struct {
 
 var client *mongo.Client
 var userCollection *mongo.Collection
+
+func getBearerToken(r *http.Request) (string, error) {
+    authHeader := r.Header.Get("Authorization")
+    if authHeader == "" {
+        return "", errors.New("missing Authorization header")
+    }
+
+    parts := strings.SplitN(authHeader, " ", 2)
+    if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+        return "", errors.New("invalid Authorization header format")
+    }
+
+    return strings.TrimSpace(parts[1]), nil
+}
+
+func validateJWTFromRequest(r *http.Request) (*Claims, error) {
+    tokenString, err := getBearerToken(r)
+    if err != nil {
+        return nil, err
+    }
+
+    claims := &Claims{}
+    token, err := jwt.ParseWithClaims(
+        tokenString,
+        claims,
+        func(token *jwt.Token) (interface{}, error) {
+            if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+                return nil, errors.New("unexpected signing method")
+            }
+            return jwtKey, nil
+        },
+        jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+    )
+    if err != nil || !token.Valid {
+        return nil, errors.New("invalid or expired token")
+    }
+
+    return claims, nil
+}
 
 func connectMongo() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -105,28 +146,46 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 // GET /authinfo/{username} (internal use only)
 func getUserInfo(w http.ResponseWriter, r *http.Request) {
-	username := r.URL.Path[len("/authinfo/"):]
-	if username == "" {
-		http.Error(w, "Username missing", http.StatusBadRequest)
-		return
-	}
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+    claims, err := validateJWTFromRequest(r)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
 
-	var user User
-	err := userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
-	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
-	}
+    username := r.URL.Path[len("/authinfo/"):]
+    if username == "" {
+        http.Error(w, "Username missing", http.StatusBadRequest)
+        return
+    }
 
-	// Only return safe fields
-	json.NewEncoder(w).Encode(map[string]string{
-		"username": user.Username,
-		"name":     user.Name,
-	})
+    // Prevent callers from fetching other users' info using a valid token.
+    if claims.Username != username {
+        http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    var user User
+    err = userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
+    if err != nil {
+        http.Error(w, "User not found", http.StatusNotFound)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{
+        "username": user.Username,
+        "name":     user.Name,
+    })
 }
+
 
 // PUT /authinfo/update
 func updateUserInfo(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +212,6 @@ func updateUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("Auth user name updated"))
 }
-
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -206,6 +264,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"token": tokenString,
+		"username": creds.Username,
 	})
 }
 
