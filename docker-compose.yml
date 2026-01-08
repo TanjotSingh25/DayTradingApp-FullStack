@@ -1,10 +1,23 @@
-version: "3.8"
+# version: "3.8"
 
 services:
+  frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+    networks:
+      - backend
+    restart: unless-stopped
+
   auth-service:
     build:
       context: ./AuthenticationService
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     container_name: auth-service
     ports:
       - "8080:8080"
@@ -14,6 +27,7 @@ services:
       - MONGO_URI=mongodb://mongodb:27017
     networks:
       - backend
+    restart: unless-stopped
 
   mongodb:
     image: mongo:latest

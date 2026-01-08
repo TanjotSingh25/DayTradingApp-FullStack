@@ -1,0 +1,81 @@
+.dashboard-container {
+  min-height: 100vh;
+  background: #f1f5f9;
+}
+
+.dashboard-header {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logout-button {
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dashboard-content {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.welcome-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.welcome-card h2 {
+  color: #0f172a;
+  margin-top: 0;
+  font-weight: 700;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-card p {
+  color: #475569;
+  line-height: 1.6;
+}
+
+.welcome-card ul {
+  color: #475569;
+  line-height: 1.8;
+  margin-top: 20px;
+}
+
+.welcome-card li {
+  margin-bottom: 8px;
+}
+

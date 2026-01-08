@@ -1,0 +1,291 @@
+
+DAY TRADING SIMULATOR — FULL ROADMAP & BLUEPRINT
+==============================================
+
+GOAL
+----
+Rebuild a university day trading simulator as a production-style, solo project to:
+- Demonstrate backend, systems, and distributed architecture skills
+- Expand tech stack (TypeScript, real-time systems, time-series DBs, observability)
+- Be defensible in interviews as a realistic, scalable system
+
+This project uses microservices, event-driven design, containerization, and a modern frontend.
+
+--------------------------------------------------
+HIGH-LEVEL ARCHITECTURE
+--------------------------------------------------
+
+Frontend (React + TypeScript)
+  |
+  | REST + WebSockets
+  v
+API Gateway (Nginx / Envoy)
+  |
+  +-------------------------------+
+  |                               |
+Auth Service (Golang)        Trading UI API (optional)
+  |
+Event Bus (RabbitMQ)
+  |
+  +-----------+-----------+-----------+-----------+
+  |           |           |           |
+Market Data  Order       Risk        Portfolio
+Service      Engine      Engine      Service
+(Python)     (Golang)    (Python)    (Flask)
+  |
+Time-Series DB (TimescaleDB / InfluxDB)
+
+--------------------------------------------------
+REPO STRUCTURE (MONOREPO)
+--------------------------------------------------
+
+day-trading-simulator/
+│
+├── gateway/
+│   ├── nginx/
+│   └── envoy/
+│
+├── services/
+│   ├── auth-service/          # Golang, JWT, refresh tokens
+│   ├── user-service/          # Flask, profiles, settings
+│   ├── market-data-service/   # Python, real market data ingestion
+│   ├── order-service/         # Golang, order matching engine
+│   ├── risk-engine/           # Python, trading limits & validation
+│   ├── portfolio-service/     # Flask, positions & balances
+│   └── analytics-service/     # Python, PnL & stats
+│
+├── frontend/
+│   └── web/                   # React + TypeScript
+│
+├── messaging/
+│   ├── rabbitmq/
+│   └── event-schemas/
+│
+├── infra/
+│   ├── docker/
+│   ├── docker-compose.yml
+│   └── k8s/                   # Optional future extension
+│
+├── observability/
+│   ├── prometheus/
+│   ├── grafana/
+│   └── logs/
+│
+├── load-testing/
+│   └── jmeter/
+│
+└── README.md
+
+--------------------------------------------------
+EVENT-DRIVEN DESIGN (CORE IDEA)
+--------------------------------------------------
+
+- Services communicate via events, not direct calls
+- RabbitMQ used for async communication
+- Each service owns its own data
+
+Example Flow:
+1. User places order (Frontend → Order Service)
+2. Order Service emits ORDER_CREATED
+3. Risk Engine validates → emits ORDER_APPROVED / ORDER_REJECTED
+4. Order Engine executes → emits ORDER_FILLED
+5. Portfolio updates positions
+6. Analytics updates PnL
+7. Frontend receives WebSocket update
+
+--------------------------------------------------
+PHASED DEVELOPMENT ROADMAP
+--------------------------------------------------
+
+PHASE 1 — Infrastructure & Skeleton (Week 1)
+- Setup monorepo
+- Dockerize all services
+- docker-compose for local dev
+- Nginx API gateway
+- RabbitMQ container
+- Health check endpoints
+
+Deliverable:
+- `docker-compose up` brings everything online
+
+--------------------------------------------------
+
+PHASE 2 — Authentication Service (Week 1–2)
+- Golang JWT auth (reuse existing)
+- Refresh tokens
+- Role-based claims
+- Gateway JWT validation
+- Secure service-to-service calls
+
+Deliverable:
+- Secure login/signup with JWT across services
+
+--------------------------------------------------
+
+PHASE 3 — Market Data Ingestion (Week 2)
+Learning:
+- Time-series DB concepts
+- OHLC data modeling
+
+Tasks:
+- Python service pulls market data (CSV replay initially)
+- Normalize ticks → candles
+- Publish price events
+- Store historical data
+
+Deliverable:
+- Live market prices updating continuously
+
+--------------------------------------------------
+
+PHASE 4 — Order Management Engine (Week 3)
+Core System:
+- Market and limit orders
+- Order state machine
+- Partial fills
+- Slippage simulation (optional)
+- Deterministic execution logic
+
+Tech:
+- Golang + goroutines
+
+Deliverable:
+- Orders execute realistically against market data
+
+--------------------------------------------------
+
+PHASE 5 — Portfolio Service (Week 3–4)
+- Track positions
+- Cash balances
+- Trade history
+- Idempotent updates
+
+Tech:
+- Flask + PostgreSQL
+
+Deliverable:
+- Accurate portfolio state after trades
+
+--------------------------------------------------
+
+PHASE 6 — Risk Engine (Week 4)
+Learning:
+- Position limits
+- Max drawdown
+- Margin basics
+
+Tasks:
+- Validate orders
+- Enforce risk rules
+- Emit approval/rejection events
+
+Deliverable:
+- Realistic trading constraints
+
+--------------------------------------------------
+
+PHASE 7 — Frontend Foundation (Week 4–5)
+Learning:
+- TypeScript fundamentals
+- Typed API responses
+- React patterns
+
+Tasks:
+- React + Vite
+- Auth flow
+- Order placement UI
+- Portfolio dashboard
+
+Deliverable:
+- Fully usable trading UI
+
+--------------------------------------------------
+
+PHASE 8 — Real-Time Frontend (Week 5)
+Learning:
+- WebSockets
+
+Tasks:
+- Live prices
+- Live order updates
+- Streaming portfolio changes
+
+Deliverable:
+- App feels like a real trading terminal
+
+--------------------------------------------------
+
+PHASE 9 — Analytics & PnL (Week 6)
+- Realized vs unrealized PnL
+- Trade stats
+- Win/loss ratio
+- Drawdown
+
+Deliverable:
+- Interview-ready dashboards
+
+--------------------------------------------------
+
+PHASE 10 — Observability & Load Testing (Week 6)
+Learning:
+- Metrics & monitoring basics
+
+Tasks:
+- Prometheus metrics
+- Grafana dashboards
+- JMeter load tests
+- Failure simulation
+
+Deliverable:
+- Scalability claims with evidence
+
+--------------------------------------------------
+TECH STACK SUMMARY
+--------------------------------------------------
+
+Languages:
+- Golang
+- Python
+- TypeScript
+- JavaScript
+
+Backend:
+- Flask
+- REST APIs
+- JWT
+- RabbitMQ
+
+Databases:
+- PostgreSQL
+- MongoDB (optional)
+- TimescaleDB / InfluxDB
+
+Frontend:
+- React
+- TypeScript
+- WebSockets
+
+DevOps:
+- Docker
+- Nginx
+- Docker Compose
+- Prometheus
+- Grafana
+- JMeter
+
+--------------------------------------------------
+RESUME POSITIONING
+--------------------------------------------------
+
+Key Talking Points:
+- Event-driven microservices
+- Real-time data ingestion
+- Risk management system
+- Time-series analytics
+- Observability and load testing
+- Production-style architecture
+
+This is NOT a CRUD app.
+This is a systems project.
+
+END OF FILE

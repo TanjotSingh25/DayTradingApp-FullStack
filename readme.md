@@ -1,40 +1,118 @@
-Great! Here's a clean and clear summary of your project that you can use for your README file:
+## 📈 Day Trading Simulator – Microservices Architecture
 
----
-
-## 📈 Stock Trading Simulator – Microservices Architecture (Golang)
-
-This project is a stock trading simulator built with a microservices architecture using Golang as the primary backend language. The goal is to simulate real-world stock trading experiences, allowing users to:
+This project is a day trading simulator built with a microservices architecture. The goal is to simulate real-world stock trading experiences, allowing users to:
 
 -   **Create and manage user accounts**
 -   **Add virtual money to their accounts**
 -   **View real-time or near real-time stock data (e.g., delayed by a few minutes or hours)**
 -   **Simulate buying and selling of stocks just like in actual trading platforms**
 
-The system is designed with scalability and modularity in mind using **Docker**, **Nginx**, and **MongoDB**. Real stock market data will be fetched using reliable public APIs (supporting both real-time and historical data).
+The system is designed with scalability and modularity in mind using **Docker**, **Nginx**, **MongoDB**, **React**, and **TypeScript**. Real stock market data will be fetched using reliable public APIs (supporting both real-time and historical data).
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Docker and Docker Compose installed
+- Node.js 20+ (for local frontend development)
+
+### Running with Docker Compose
+
+1. **Start all services:**
+   ```bash
+   docker-compose up --build
+   ```
+
+2. **Access the application:**
+   - Frontend: http://localhost:3000
+   - Auth Service API: http://localhost:8080
+
+3. **Stop all services:**
+   ```bash
+   docker-compose down
+   ```
+
+### Local Development
+
+#### Frontend Development
+```bash
+cd frontend/web
+npm install
+npm run dev
+```
+The frontend will be available at http://localhost:5173 (Vite default port)
+
+#### Authentication Service
+The authentication service runs in Docker. To rebuild after changes:
+```bash
+docker-compose up --build auth-service
+```
+
+### 🔧 Current Services
+
+1. **Frontend (React + TypeScript)**
+   - Modern React application with TypeScript
+   - Login and registration pages
+   - Protected routes with JWT authentication
+   - Responsive UI with modern design
+
+2. **Authentication Service (Golang)**
+   - User registration and login
+   - JWT-based session management
+   - MongoDB for user data storage
+   - RESTful API endpoints
+
+3. **MongoDB**
+   - Database for authentication service
 
 ### 🔧 Planned Microservices
 
-Here are the core microservices envisioned for the project:
-
-1. **Authentication Service**
-   Handles user sign-up, login, JWT-based session management.
-
-2. **User Account Service**
+1. **User Account Service**
    Manages user profiles, account balances, and transaction history.
 
-3. **Stock Market Data Service**
+2. **Stock Market Data Service**
    Fetches real or delayed stock price data from an external API and caches it for use.
 
-4. **Trade Execution Service**
+3. **Trade Execution Service**
    Simulates the buying and selling of stocks, updates balances, and manages virtual portfolios.
 
-5. **Portfolio Management Service**
-   Displays a user’s current holdings, stock performance, and virtual portfolio value.
+4. **Portfolio Management Service**
+   Displays a user's current holdings, stock performance, and virtual portfolio value.
 
-6. **API Gateway (Nginx)**
-   Acts as a reverse proxy to route requests to appropriate microservices securely and efficiently.
+5. **Risk Engine**
+   Validates orders and enforces trading limits.
 
----
+6. **Analytics Service**
+   Provides PnL calculations and trading statistics.
 
-Let me know when you're ready to build out each service, and I can walk you through service structure, endpoints, Dockerization, and even which APIs to use for stock data (e.g., Yahoo Finance, Alpha Vantage, Twelve Data, etc.). We’ll also keep things clean and resume-worthy.
+## 📁 Project Structure
+
+```
+day-trading-simulator/
+├── frontend/
+│   └── web/              # React + TypeScript frontend
+│       ├── src/
+│       │   ├── components/   # React components
+│       │   ├── contexts/     # React contexts (Auth)
+│       │   └── services/     # API services
+│       ├── Dockerfile
+│       └── nginx.conf
+├── AuthenticationService/    # Golang auth service
+├── docker-compose.yml
+└── readme.md
+```
+
+## 🔐 Authentication API Endpoints
+
+- `POST /register` - Register a new user (requires: username, password, name)
+- `POST /login` - Login user (returns: token, username)
+- `GET /authinfo/{username}` - Get user info (requires JWT)
+- `PUT /authinfo/update` - Update user info (requires JWT)
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React 19, TypeScript, Vite, React Router
+- **Backend:** Golang, MongoDB
+- **DevOps:** Docker, Docker Compose, Nginx
+- **Architecture:** Microservices, RESTful APIs
+
+For more details, see `day_trading_simulator_roadmap.txt`.
