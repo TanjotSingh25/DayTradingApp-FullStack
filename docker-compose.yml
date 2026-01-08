@@ -23,8 +23,30 @@ services:
       - "8080:8080"
     depends_on:
       - mongodb
+      - user-service
     environment:
       - MONGO_URI=mongodb://mongodb:27017
+      - USER_SERVICE_URL=http://user-service:8081
+      - SERVICE_SECRET=service-secret-key
+    networks:
+      - backend
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./UserServices
+      dockerfile: dockerfile
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - DB_NAME=userdb
+      - PORT=8081
+      - JWT_SECRET=supersecretkey
+      - SERVICE_SECRET=service-secret-key
     networks:
       - backend
     restart: unless-stopped

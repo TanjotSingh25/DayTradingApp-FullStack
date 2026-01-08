@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 	"errors"
 	"strings"
@@ -17,6 +19,15 @@ import (
 )
 
 var jwtKey = []byte("supersecretkey") // Use env variable in production
+var userServiceURL = getEnv("USER_SERVICE_URL", "http://user-service:8081")
+var serviceSecret = getEnv("SERVICE_SECRET", "service-secret-key")
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
 type User struct {
 	Username string `bson:"username"`
@@ -140,8 +151,51 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create user profile in user service (non-blocking)
+	go createUserProfile(creds.Username, creds.Name)
+
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User registered successfully"))
+}
+
+func createUserProfile(username, name string) {
+	profileData := map[string]interface{}{
+		"username":     username,
+		"display_name": name,
+		"email":        "",
+		"timezone":     "UTC",
+		"country":      "",
+	}
+
+	jsonData, err := json.Marshal(profileData)
+	if err != nil {
+		log.Printf("Error marshaling profile data: %v", err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", userServiceURL+"/profile/internal", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request to user service: %v", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Service-Key", serviceSecret)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error calling user service: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		log.Printf("User service returned status %d when creating profile for %s", resp.StatusCode, username)
+		return
+	}
+
+	log.Printf("Successfully created user profile for %s", username)
 }
 
 // GET /authinfo/{username} (internal use only)
