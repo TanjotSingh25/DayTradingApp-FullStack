@@ -13,6 +13,65 @@
   box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.home-button {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.home-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(-2px);
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+}
+
+.dashboard-nav {
+  background: white;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0 40px;
+  display: flex;
+  gap: 0;
+}
+
+.nav-tab {
+  padding: 15px 30px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-tab:hover {
+  color: #3b82f6;
+  background: #f8fafc;
+}
+
+.nav-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  background: #f8fafc;
+}
+
 .dashboard-header h1 {
   margin: 0;
   font-size: 1.8em;

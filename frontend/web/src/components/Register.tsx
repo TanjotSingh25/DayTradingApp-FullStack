@@ -4,7 +4,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Auth.css';
 
-export default function Register() {
+interface RegisterProps {
+  onSuccess?: () => void;
+}
+
+export default function Register({ onSuccess }: RegisterProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -20,7 +24,11 @@ export default function Register() {
 
     try {
       await register(username, password, name);
-      navigate('/dashboard');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -75,6 +83,9 @@ export default function Register() {
         </form>
         <p className="auth-link">
           Already have an account? <Link to="/login">Login here</Link>
+        </p>
+        <p className="auth-link">
+          <Link to="/">← Back to Homepage</Link>
         </p>
       </div>
     </div>

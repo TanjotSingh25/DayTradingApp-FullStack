@@ -54,7 +54,7 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb
-    restart: always
+    restart: unless-stopped
     ports:
       - "27018:27017"
     volumes:
@@ -62,8 +62,26 @@ services:
     networks:
       - backend
 
+  postgres:
+    image: timescale/timescaledb:2.14.2-pg16-oss
+    container_name: trading_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trading
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    networks:
+      - backend
+    restart: unless-stopped
+    command: ["postgres", "-c", "shared_preload_libraries=timescaledb"]
+
 volumes:
   mongo_data:
+  pgdata:
 
 networks:
   backend:

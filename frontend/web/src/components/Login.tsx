@@ -4,7 +4,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Auth.css';
 
-export default function Login() {
+interface LoginProps {
+  onSuccess?: () => void;
+}
+
+export default function Login({ onSuccess }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +23,11 @@ export default function Login() {
 
     try {
       await login(username, password);
-      navigate('/dashboard');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -62,6 +70,9 @@ export default function Login() {
         </form>
         <p className="auth-link">
           Don't have an account? <Link to="/register">Register here</Link>
+        </p>
+        <p className="auth-link">
+          <Link to="/">← Back to Homepage</Link>
         </p>
       </div>
     </div>

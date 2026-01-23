@@ -231,30 +231,48 @@ def get_user_preferences(username: str, authenticated_username: str):
     try:
         preferences = preferences_collection.find_one({"username": username})
         
+        # Default preferences structure
+        default_prefs = {
+            "username": username,
+            "default_order_qty": 100,
+            "favorite_symbols": [],
+            "confirm_market_orders": True,
+            "ui_preferences": {
+                "dark_mode": False,
+                "layout": "default"
+            },
+            "risk_preferences": {
+                "soft_limit_warning": True,
+                "max_position_size": 10000
+            }
+        }
+        
         if not preferences:
             # Return default preferences if none exist
-            default_prefs = {
-                "username": username,
-                "default_order_qty": 100,
-                "favorite_symbols": [],
-                "confirm_market_orders": True,
-                "ui_preferences": {
-                    "dark_mode": False,
-                    "layout": "default"
-                },
-                "risk_preferences": {
-                    "soft_limit_warning": True,
-                    "max_position_size": 10000
-                }
-            }
             return jsonify(default_prefs), 200
         
         # Remove MongoDB _id
         preferences.pop('_id', None)
-        if 'updated_at' in preferences:
-            preferences['updated_at'] = str(preferences['updated_at'])
         
-        return jsonify(preferences), 200
+        # Merge with defaults to ensure all fields exist (in case document is incomplete)
+        merged_prefs = default_prefs.copy()
+        merged_prefs.update(preferences)
+        
+        # Ensure nested objects are complete
+        if 'ui_preferences' in preferences and isinstance(preferences['ui_preferences'], dict):
+            merged_prefs['ui_preferences'].update(preferences['ui_preferences'])
+        
+        if 'risk_preferences' in preferences and isinstance(preferences['risk_preferences'], dict):
+            merged_prefs['risk_preferences'].update(preferences['risk_preferences'])
+        
+        # Ensure favorite_symbols is a list
+        if 'favorite_symbols' not in merged_prefs or not isinstance(merged_prefs['favorite_symbols'], list):
+            merged_prefs['favorite_symbols'] = []
+        
+        if 'updated_at' in merged_prefs:
+            merged_prefs['updated_at'] = str(merged_prefs['updated_at'])
+        
+        return jsonify(merged_prefs), 200
     except Exception as e:
         logger.error(f"Error fetching user preferences: {e}")
         return jsonify({"error": "Internal server error"}), 500
