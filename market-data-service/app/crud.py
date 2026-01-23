@@ -1,8 +1,9 @@
 """CRUD operations for database queries."""
-from app.db import get_conn
+from app.db import get_conn, DatabaseConnectionError
 from app.models import Candle
 from datetime import datetime
 from typing import Optional
+import psycopg.errors
 
 
 class NotFoundError(Exception):
@@ -25,9 +26,21 @@ def list_symbols(limit: int, prefix: Optional[str] = None) -> list[str]:
     
     Returns:
         List of ticker strings
+        
+    Raises:
+        DatabaseConnectionError: If database connection fails
+        BadRequestError: If parameters are invalid
     """
-    conn = get_conn()
+    # Validate parameter types
+    if not isinstance(limit, int) or limit < 1:
+        raise BadRequestError(f"Invalid limit parameter: {limit}. Must be a positive integer.")
+    
+    if prefix is not None and not isinstance(prefix, str):
+        raise BadRequestError(f"Invalid prefix parameter: {prefix}. Must be a string.")
+    
+    conn = None
     try:
+        conn = get_conn()
         with conn.cursor() as cur:
             if prefix:
                 query = """
@@ -50,8 +63,15 @@ def list_symbols(limit: int, prefix: Optional[str] = None) -> list[str]:
             
             results = cur.fetchall()
             return [row[0] for row in results]
+    except DatabaseConnectionError:
+        raise
+    except psycopg.errors.QueryCanceled:
+        raise DatabaseConnectionError("Query timeout: Database operation took too long.")
+    except psycopg.errors.Error as e:
+        raise DatabaseConnectionError(f"Database query error: {str(e)}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def get_candles(
@@ -74,12 +94,25 @@ def get_candles(
     
     Raises:
         NotFoundError: If no candles found for the ticker
+        BadRequestError: If parameters are invalid
+        DatabaseConnectionError: If database connection fails
     """
-    if order not in ("asc", "desc"):
-        raise BadRequestError(f"Invalid order: {order}. Must be 'asc' or 'desc'")
+    # Validate parameter types
+    if not isinstance(ticker, str) or not ticker.strip():
+        raise BadRequestError(f"Invalid ticker parameter: {ticker}. Must be a non-empty string.")
     
-    conn = get_conn()
+    if not isinstance(tf_min, int) or tf_min < 1:
+        raise BadRequestError(f"Invalid tf_min parameter: {tf_min}. Must be a positive integer.")
+    
+    if not isinstance(limit, int) or limit < 1:
+        raise BadRequestError(f"Invalid limit parameter: {limit}. Must be a positive integer.")
+    
+    if not isinstance(order, str) or order not in ("asc", "desc"):
+        raise BadRequestError(f"Invalid order parameter: {order}. Must be 'asc' or 'desc'")
+    
+    conn = None
     try:
+        conn = get_conn()
         with conn.cursor() as cur:
             query = """
                 SELECT ticker, tf_min, ts, open, high, low, close, volume, openint
@@ -110,8 +143,19 @@ def get_candles(
                 ))
             
             return candles
+    except DatabaseConnectionError:
+        raise
+    except NotFoundError:
+        raise
+    except BadRequestError:
+        raise
+    except psycopg.errors.QueryCanceled:
+        raise DatabaseConnectionError("Query timeout: Database operation took too long.")
+    except psycopg.errors.Error as e:
+        raise DatabaseConnectionError(f"Database query error: {str(e)}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def get_candles_range(
@@ -136,9 +180,31 @@ def get_candles_range(
     
     Raises:
         NotFoundError: If no candles found for the ticker
+        BadRequestError: If parameters are invalid
+        DatabaseConnectionError: If database connection fails
     """
-    conn = get_conn()
+    # Validate parameter types
+    if not isinstance(ticker, str) or not ticker.strip():
+        raise BadRequestError(f"Invalid ticker parameter: {ticker}. Must be a non-empty string.")
+    
+    if not isinstance(tf_min, int) or tf_min < 1:
+        raise BadRequestError(f"Invalid tf_min parameter: {tf_min}. Must be a positive integer.")
+    
+    if not isinstance(start, datetime):
+        raise BadRequestError(f"Invalid start parameter: {start}. Must be a datetime object.")
+    
+    if not isinstance(end, datetime):
+        raise BadRequestError(f"Invalid end parameter: {end}. Must be a datetime object.")
+    
+    if not isinstance(limit, int) or limit < 1:
+        raise BadRequestError(f"Invalid limit parameter: {limit}. Must be a positive integer.")
+    
+    if start > end:
+        raise BadRequestError("Start datetime must be before or equal to end datetime")
+    
+    conn = None
     try:
+        conn = get_conn()
         with conn.cursor() as cur:
             query = """
                 SELECT ticker, tf_min, ts, open, high, low, close, volume, openint
@@ -172,8 +238,19 @@ def get_candles_range(
                 ))
             
             return candles
+    except DatabaseConnectionError:
+        raise
+    except NotFoundError:
+        raise
+    except BadRequestError:
+        raise
+    except psycopg.errors.QueryCanceled:
+        raise DatabaseConnectionError("Query timeout: Database operation took too long.")
+    except psycopg.errors.Error as e:
+        raise DatabaseConnectionError(f"Database query error: {str(e)}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def get_first_last_ts(ticker: str, tf_min: int) -> Optional[tuple[datetime, datetime]]:
@@ -186,9 +263,21 @@ def get_first_last_ts(ticker: str, tf_min: int) -> Optional[tuple[datetime, date
     
     Returns:
         Tuple of (first_ts, last_ts) or None if no candles found
+        
+    Raises:
+        BadRequestError: If parameters are invalid
+        DatabaseConnectionError: If database connection fails
     """
-    conn = get_conn()
+    # Validate parameter types
+    if not isinstance(ticker, str) or not ticker.strip():
+        raise BadRequestError(f"Invalid ticker parameter: {ticker}. Must be a non-empty string.")
+    
+    if not isinstance(tf_min, int) or tf_min < 1:
+        raise BadRequestError(f"Invalid tf_min parameter: {tf_min}. Must be a positive integer.")
+    
+    conn = None
     try:
+        conn = get_conn()
         with conn.cursor() as cur:
             query = """
                 SELECT MIN(ts), MAX(ts)
@@ -202,6 +291,15 @@ def get_first_last_ts(ticker: str, tf_min: int) -> Optional[tuple[datetime, date
             if row and row[0] and row[1]:
                 return (row[0], row[1])
             return None
+    except DatabaseConnectionError:
+        raise
+    except BadRequestError:
+        raise
+    except psycopg.errors.QueryCanceled:
+        raise DatabaseConnectionError("Query timeout: Database operation took too long.")
+    except psycopg.errors.Error as e:
+        raise DatabaseConnectionError(f"Database query error: {str(e)}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 

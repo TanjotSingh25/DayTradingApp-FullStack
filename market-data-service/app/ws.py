@@ -2,9 +2,12 @@
 import asyncio
 from fastapi import WebSocket, Query
 from app.config import settings
-from app.crud import get_candles, NotFoundError
+from app.crud import get_candles, NotFoundError, BadRequestError
+from app.db import DatabaseConnectionError
 from app.models import WsCandleMessage, WsStatusMessage, Candle
 from typing import Optional
+from fastapi.encoders import jsonable_encoder
+from starlette.websockets import WebSocketDisconnect
 
 
 async def replay_candles(
@@ -40,7 +43,7 @@ async def replay_candles(
                 step_seconds=step_seconds,
                 total_candles=0
             )
-            await websocket.send_json(status.model_dump())
+            await websocket.send_json(jsonable_encoder(status))
             await websocket.close(code=1008, reason="No candles found")
             return
         
@@ -55,7 +58,7 @@ async def replay_candles(
             step_seconds=step_seconds,
             total_candles=total_candles
         )
-        await websocket.send_json(status.model_dump())
+        await websocket.send_json(jsonable_encoder(status))
         
         # Replay candles
         for seq, candle in enumerate(candles):
@@ -64,7 +67,7 @@ async def replay_candles(
                 candle=candle,
                 seq=seq
             )
-            await websocket.send_json(message.model_dump())
+            await websocket.send_json(jsonable_encoder(message))
             
             # Sleep between candles (except for the last one)
             if seq < total_candles - 1:
@@ -79,11 +82,25 @@ async def replay_candles(
             step_seconds=step_seconds,
             total_candles=total_candles
         )
-        await websocket.send_json(status.model_dump())
+        await websocket.send_json(jsonable_encoder(status))
         
         # Close gracefully
         await websocket.close()
+
+    except WebSocketDisconnect:
+        return  # Client disconnected, exit silently
         
+    except DatabaseConnectionError as e:
+        status = WsStatusMessage(
+            type="STATUS",
+            message=f"Database connection error: {str(e)}",
+            ticker=ticker,
+            tf_min=tf_min,
+            step_seconds=step_seconds,
+            total_candles=0
+        )
+        await websocket.send_json(jsonable_encoder(status))
+        await websocket.close(code=1011, reason="Database connection failed")
     except NotFoundError as e:
         status = WsStatusMessage(
             type="STATUS",
@@ -93,17 +110,32 @@ async def replay_candles(
             step_seconds=step_seconds,
             total_candles=0
         )
-        await websocket.send_json(status.model_dump())
+        await websocket.send_json(jsonable_encoder(status))
         await websocket.close(code=1008, reason=str(e))
-    except Exception as e:
+    except BadRequestError as e:
         status = WsStatusMessage(
             type="STATUS",
-            message=f"Error: {str(e)}",
+            message=f"Invalid request: {str(e)}",
             ticker=ticker,
             tf_min=tf_min,
             step_seconds=step_seconds,
             total_candles=0
         )
-        await websocket.send_json(status.model_dump())
-        await websocket.close(code=1011, reason="Internal error")
+        await websocket.send_json(jsonable_encoder(status))
+        await websocket.close(code=1008, reason=str(e))
+    except Exception as e:
+        try:
+            status = WsStatusMessage(
+                type="STATUS",
+                message=f"Error: {str(e)}",
+                ticker=ticker,
+                tf_min=tf_min,
+                step_seconds=step_seconds,
+                total_candles=0,
+            )
+            await websocket.send_json(jsonable_encoder(status))
+            await websocket.close(code=1011, reason="Internal error")
+        except Exception:
+            # If already closed, don't spam logs with secondary failures.
+            return
 

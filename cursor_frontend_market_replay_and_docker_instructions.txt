@@ -1,0 +1,305 @@
+CURSOR INSTRUCTIONS — Frontend Live Candlestick Replay + Docker (Market Data Service)
+Project: DayTradingApp-FullStack
+Date: 2026-01-22
+
+GOAL
+Add a frontend feature that:
+1) Lets the user pick a ticker (symbol) from the Market Data Service.
+2) Shows historical candles as a candlestick chart + volume.
+3) Streams live candle replay over WebSocket (accelerated simulation) and updates the chart in real time.
+4) Supports “reset per symbol”: changing ticker closes the current socket, clears chart state, and starts from candle 0 for the new ticker.
+5) Works both when running locally and when running via Docker Compose.
+
+BACKEND CONTRACT (ALREADY IMPLEMENTED)
+Market Data Service base URLs (host machine):
+- HTTP: http://localhost:8000
+- WS:   ws://localhost:8000
+
+Endpoints:
+- GET /health -> { "status": "ok" }
+- GET /symbols?limit=100&prefix=A -> { "symbols": [...], "count": N }
+- GET /candles?ticker=AAPL&tf_min=5&limit=200&order=asc -> { "data": [...], "count": N }
+
+WebSocket:
+- ws://localhost:8000/ws/replay?ticker=AAPL&tf_min=5&step_seconds=2
+Messages:
+- STATUS: { type: "STATUS", message: string, ticker: string, tf_min: number, step_seconds: number, total_candles: number }
+- CANDLE: { type: "CANDLE", seq: number, candle: Candle }
+
+Candle shape (JSON):
+{
+  "ticker": "AAPL",
+  "tf_min": 5,
+  "ts": "2025-08-13T20:55:00",   // ISO string
+  "open": 231.07,
+  "high": 232.19,
+  "low": 230.84,
+  "close": 231.18,
+  "volume": 2122371,
+  "openint": 0
+}
+
+FRONTEND TECH CHOICE
+Use React + TypeScript.
+Use TradingView Lightweight Charts for candlestick + volume.
+
+IMPORTANT: The existing repo already has a frontend in ./frontend/web (see docker-compose). Modify that app rather than creating a new one, unless it is clearly missing React/TS.
+
+--------------------------------------------------------------------
+PART A — FRONTEND IMPLEMENTATION
+--------------------------------------------------------------------
+
+A1) Add environment configuration
+Detect build tool:
+- If Vite: use import.meta.env and variables must start with VITE_
+- If CRA: use process.env and variables must start with REACT_APP_
+
+Define 2 base URLs:
+- MARKET_DATA_HTTP_BASE (default http://localhost:8000)
+- MARKET_DATA_WS_BASE   (default ws://localhost:8000)
+
+Implement with a small utility so the rest of the code doesn’t care about Vite vs CRA.
+
+Example strategy:
+- Create src/config/env.ts:
+  - export const MARKET_DATA_HTTP_BASE
+  - export const MARKET_DATA_WS_BASE
+  - set defaults if env vars missing
+
+If Vite, add .env file in frontend root (./frontend/web/.env):
+  VITE_MARKET_DATA_HTTP_BASE=http://localhost:8000
+  VITE_MARKET_DATA_WS_BASE=ws://localhost:8000
+
+If CRA, use:
+  REACT_APP_MARKET_DATA_HTTP_BASE=...
+  REACT_APP_MARKET_DATA_WS_BASE=...
+
+A2) Create a typed API client
+Create src/api/marketData.ts with:
+- Types:
+  - Candle
+  - CandleResponse { data: Candle[]; count: number }
+  - SymbolsResponse { symbols: string[]; count: number }
+  - WsStatusMessage, WsCandleMessage, WsMessage union
+- Functions:
+  - fetchHealth(): Promise<{status:string}>
+  - fetchSymbols(limit=100, prefix?:string): Promise<SymbolsResponse>
+  - fetchCandles({ ticker, tf_min, limit, order }): Promise<CandleResponse>
+  - buildReplayWsUrl({ ticker, tf_min, step_seconds }): string
+
+Implementation notes:
+- Use fetch() with proper error handling:
+  - non-2xx -> throw Error with response text
+- Keep it simple and explicit; no external HTTP client required.
+
+A3) Build a hook that manages: REST bootstrap + WS streaming
+Create src/hooks/useMarketReplay.ts:
+Inputs:
+- ticker: string | null
+- tfMin: number (default 5)
+- stepSeconds: number (default 2)
+- initialLimit: number (default 200)
+
+Behavior:
+- When ticker changes:
+  1) close any existing websocket
+  2) clear candles state and status
+  3) fetch initial candles via REST (order asc)
+  4) connect websocket replay
+
+- WebSocket message handling:
+  - STATUS: set status text (and store metadata)
+  - CANDLE: append candle to state (or update last candle if same timestamp)
+
+- Keep a rolling window in state (e.g., last 500 candles) to maintain performance.
+- Provide outputs:
+  - candles: Candle[]
+  - status: string
+  - isLoading: boolean
+  - error: string | null
+  - connect(): void  (optional)
+  - disconnect(): void
+  - reset(): void (close and re-open from candle 0)
+
+Implementation detail:
+- Use a ref for ws: const wsRef = useRef<WebSocket | null>(null)
+- Use AbortController for REST fetch on ticker change to avoid race conditions.
+- On unmount: always close ws.
+
+A4) Chart component (candles + volume) using lightweight-charts
+Create src/components/MarketChart/CandlestickChart.tsx:
+Props:
+- candles: Candle[]
+- height?: number (e.g., 520)
+
+Responsibilities:
+- Create chart instance in useEffect (only once)
+- Create:
+  - candlestick series
+  - histogram series for volume (overlay at bottom scale)
+- Convert Candle -> LightweightCharts data points:
+  - time: UTCTimestamp (seconds) = Math.floor(new Date(ts).getTime()/1000)
+  - ohlc fields
+- When candles changes:
+  - If first load: series.setData(all)
+  - If incremental update: series.update(last) (also update volume series)
+  - Implement diff using a ref to last timestamp
+- Clean up chart on unmount (chart.remove())
+
+A5) Build a “Market Replay” page
+Create src/pages/MarketReplayPage.tsx:
+UI elements:
+- ticker selector:
+  - loads symbols via fetchSymbols()
+  - add prefix filter input (optional)
+- tf selector (5, 15, 60) minutes (default 5)
+- stepSeconds slider or input (1..10) (default 2)
+- buttons:
+  - Start (connect) / Stop (disconnect)
+  - Reset (restart replay from candle 0)
+- status area (shows STATUS messages)
+- chart area renders <CandlestickChart candles={candles} />
+
+Page logic:
+- On first load:
+  - fetch symbols
+  - pick a default symbol (e.g., first in list) OR allow user to choose
+- When user changes ticker:
+  - trigger hook to reset and start new replay
+
+A6) Wire into existing app navigation
+Update existing router (App.tsx / routes) to add:
+- “Market Replay” page accessible at /market or /replay
+If no router exists, add a simple link and render the page in App.tsx.
+
+A7) Acceptance criteria (must pass)
+1) Opening page shows symbols dropdown populated from backend.
+2) Selecting a ticker loads initial candles and displays a candlestick chart.
+3) WebSocket streaming updates the chart every stepSeconds.
+4) Switching ticker resets the chart and starts from candle 0 (new websocket).
+5) Stop closes websocket cleanly without console errors.
+6) Works when frontend is served at http://localhost:3000 (current compose) OR dev server (http://localhost:5173).
+
+--------------------------------------------------------------------
+PART B — DOCKERIZATION FOR MARKET DATA SERVICE
+--------------------------------------------------------------------
+
+B1) Add a Dockerfile to market-data-service/
+Create market-data-service/Dockerfile:
+- Base: python:3.12-slim (or 3.11-slim)
+- Copy code
+- Install deps via requirements.txt
+- Expose 8000
+- CMD runs uvicorn: app.main:app --host 0.0.0.0 --port 8000
+
+Create market-data-service/requirements.txt with:
+fastapi
+uvicorn[standard]
+psycopg[binary]
+python-dotenv
+pydantic>=2
+pydantic-settings
+
+Note:
+- Inside docker-compose, DATABASE_URL should use the postgres service name and container port:
+  postgresql://postgres:postgres@postgres:5432/trading
+
+B2) Extend the ROOT docker-compose.yml
+Current docker-compose.yml only has frontend/auth/user/mongodb and a single network named “backend”.
+Add these services:
+1) postgres (TimescaleDB image)
+2) pgadmin (optional but recommended)
+3) market-data-service
+
+Add volumes section:
+  pg_data:
+
+Example additions (adapt naming to existing network “backend”):
+- postgres:
+  image: timescale/timescaledb:2.14.2-pg16-oss
+  container_name: trading_postgres
+  environment:
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=postgres
+    - POSTGRES_DB=trading
+  command: ["postgres", "-c", "shared_preload_libraries=timescaledb"]
+  ports:
+    - "5433:5432"
+  volumes:
+    - pg_data:/var/lib/postgresql/data
+    - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    - ./db/timescale.sql:/docker-entrypoint-initdb.d/02_timescale.sql:ro
+  networks:
+    - backend
+  restart: unless-stopped
+
+- pgadmin:
+  image: dpage/pgadmin4
+  container_name: trading_pgadmin
+  environment:
+    - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+    - PGADMIN_DEFAULT_PASSWORD=admin
+  ports:
+    - "5050:80"
+  depends_on:
+    - postgres
+  networks:
+    - backend
+  restart: unless-stopped
+
+- market-data-service:
+  build:
+    context: ./market-data-service
+    dockerfile: Dockerfile
+  container_name: market-data-service
+  environment:
+    - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/trading
+    # allow frontend origins (hosted at localhost)
+    - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+  ports:
+    - "8000:8000"
+  depends_on:
+    - postgres
+  networks:
+    - backend
+  restart: unless-stopped
+
+B3) Timescale init scripts
+Create ./db/timescale.sql:
+  CREATE EXTENSION IF NOT EXISTS timescaledb;
+  SELECT create_hypertable('candles','ts', if_not_exists => TRUE);
+
+IMPORTANT NOTE about init scripts:
+- docker-entrypoint-initdb.d scripts run only on first initialization of the data directory.
+- If pg_data volume already exists, changes to init scripts won’t re-run automatically.
+Dev option to re-init:
+  docker compose down -v
+  docker compose up --build
+
+B4) Runtime test in Docker
+After updating compose:
+- docker compose up --build
+Verify:
+- Market Data: http://localhost:8000/health
+- Frontend: http://localhost:3000
+- Frontend can fetch http://localhost:8000/symbols
+- WebSocket works: ws://localhost:8000/ws/replay?ticker=AAPL&step_seconds=2
+
+--------------------------------------------------------------------
+DELIVERABLES
+Cursor should implement:
+1) Frontend Market Replay page + chart + websocket hookup (Part A).
+2) market-data-service Dockerfile + requirements.txt (Part B1).
+3) Root docker-compose.yml updates to include postgres/pgadmin/market-data-service (Part B2).
+4) Optional: Timescale preload command + timescale.sql (Part B3).
+5) Update README describing:
+   - Local dev run
+   - Docker compose run
+
+TEST CHECKLIST (MANUAL)
+- Start docker compose
+- Open frontend
+- Select AAPL
+- Chart displays and updates every stepSeconds
+- Switch to MSFT and confirm chart resets
+- Stop -> websocket closes cleanly, no frontend console spam

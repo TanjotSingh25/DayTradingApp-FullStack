@@ -12,6 +12,7 @@ from app.crud import (
     NotFoundError,
     BadRequestError
 )
+from app.db import DatabaseConnectionError
 from app.models import CandleResponse
 from app.ws import replay_candles
 
@@ -44,12 +45,53 @@ async def bad_request_handler(request, exc: BadRequestError):
     return JSONResponse(status_code=400, content={"error": str(exc)})
 
 
+@app.exception_handler(DatabaseConnectionError)
+async def database_connection_handler(request, exc: DatabaseConnectionError):
+    """Handle DatabaseConnectionError exceptions."""
+    return JSONResponse(
+        status_code=503, 
+        content={
+            "error": "Service Unavailable",
+            "message": str(exc),
+            "type": "database_connection_error"
+        }
+    )
+
+
 # REST Endpoints
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
-    return {"status": "ok"}
+    """
+    Health check endpoint.
+    Also checks database connectivity.
+    """
+    try:
+        # Quick database connectivity check
+        from app.db import get_conn
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        conn.close()
+        return {
+            "status": "ok",
+            "database": "connected"
+        }
+    except DatabaseConnectionError as e:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "degraded",
+                "database": "disconnected",
+                "error": str(e)
+            }
+        )
+    except Exception:
+        return {
+            "status": "ok",
+            "database": "unknown"
+        }
 
 
 @app.get("/symbols")
@@ -73,6 +115,10 @@ async def get_symbols(
             "symbols": symbols,
             "count": len(symbols)
         }
+    except DatabaseConnectionError:
+        raise
+    except BadRequestError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -102,6 +148,8 @@ async def get_candles_endpoint(
     except NotFoundError:
         raise
     except BadRequestError:
+        raise
+    except DatabaseConnectionError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -154,6 +202,8 @@ async def get_candles_range_endpoint(
     except NotFoundError:
         raise
     except BadRequestError:
+        raise
+    except DatabaseConnectionError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")

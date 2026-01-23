@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     WS_DEFAULT_STEP_SECONDS: int = 15
     WS_MAX_STEP_SECONDS: int = 60
     WS_MIN_STEP_SECONDS: int = 1
+    DB_CONNECT_TIMEOUT: int = 5  # Connection timeout in seconds
+    DB_COMMAND_TIMEOUT: int = 30  # Query timeout in seconds
     
     class Config:
         env_file = ".env"
