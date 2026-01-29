@@ -74,6 +74,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/timescale.sql:/docker-entrypoint-initdb.d/02_timescale.sql:ro
     networks:
       - backend
     restart: unless-stopped
@@ -89,12 +90,46 @@ services:
     depends_on:
       - postgres
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@trading_postgres:5432/trading
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/trading
       - DEFAULT_TF_MIN=5
       - MAX_LIMIT=5000
       - WS_DEFAULT_STEP_SECONDS=15
       - WS_MAX_STEP_SECONDS=60
       - WS_MIN_STEP_SECONDS=1
+    networks:
+      - backend
+    restart: unless-stopped
+
+  portfolio-service:
+    build:
+      context: ./portfolio-service
+      dockerfile: Dockerfile
+    container_name: portfolio-service
+    ports:
+      - "8002:8002"
+    depends_on:
+      - postgres
+      - auth-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/trading
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - INTERNAL_API_KEY=some-secret
+      - JWT_SECRET=supersecretkey
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+    networks:
+      - backend
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: trading_pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
     networks:
       - backend
     restart: unless-stopped

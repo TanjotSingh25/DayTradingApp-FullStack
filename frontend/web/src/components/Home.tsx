@@ -1,98 +1,164 @@
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import './Home.css';
+import { useMemo, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import "./Home.css";
+import { useSymbolSearch } from "../hooks/useSymbolSearch";
+import { useAllSymbols } from "../hooks/useAllSymbols";
 
 export default function Home() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  const POPULAR = useMemo(() => ["AAPL", "MSFT", "NVDA", "TSLA", "GOOGL"], []);
+
+  // Pre-fetch all symbols when Home component mounts
+  const { allSymbols } = useAllSymbols();
+
+  const [activePopular, setActivePopular] = useState<string>(POPULAR[0]);
+  const {
+    query,
+    setQuery,
+    results,
+    isLoading: isSearching,
+  } = useSymbolSearch({
+    limit: 20,
+    debounceMs: 150,
+    minChars: 1,
+    allSymbols: allSymbols, // Pass pre-fetched symbols for instant filtering
+  });
+
+  const goToSymbol = (symbol: string) => {
+    const s = symbol.trim();
+    if (!s) return;
+    navigate(`/symbol/${encodeURIComponent(s)}`);
+  };
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     } else {
-      navigate('/login');
+      navigate("/login");
     }
   };
 
   const handleLogoClick = () => {
-    navigate('/');
+    navigate("/");
   };
 
   return (
     <div className="home-container">
       <div className="home-header">
         <div className="home-nav">
-          <h1 className="home-logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
+          <h1
+            className="home-logo"
+            onClick={handleLogoClick}
+            style={{ cursor: "pointer" }}
+          >
             Day Trading Simulator
           </h1>
           <div className="home-nav-buttons">
             {isAuthenticated ? (
               <>
-                <span className="welcome-text">Welcome, {user?.name || user?.username}!</span>
-                <button onClick={() => navigate('/dashboard')} className="nav-button">
+                <span className="welcome-text">
+                  Welcome, {user?.name || user?.username}!
+                </span>
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="nav-button"
+                >
                   Dashboard
                 </button>
-                <button onClick={() => {
-                  logout();
-                  navigate('/');
-                }} className="nav-button logout-btn">
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate("/");
+                  }}
+                  className="nav-button logout-btn"
+                >
                   Logout
                 </button>
               </>
             ) : (
-              <button onClick={() => navigate('/login')} className="nav-button primary">
-                Login
-              </button>
+              <>
+                <button
+                  onClick={() => navigate("/login")}
+                  className="nav-button primary"
+                >
+                  Login
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
 
-      <div className="home-hero">
-        <div className="hero-content">
-          <h2>Practice Day Trading with Real Market Data</h2>
-          <p>Simulate real trading scenarios without risking real money</p>
+      <div className="home-content">
+        <div className="home-picker">
+          <h2 className="home-picker-title">Search a stock</h2>
+
+          <div className="home-search-box">
+            <input
+              className="home-search-input"
+              value={query}
+              placeholder="Type a symbol… (e.g., AAPL.US)"
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && results.length > 0) {
+                  goToSymbol(results[0]);
+                  setQuery("");
+                }
+              }}
+            />
+            {isSearching && <div className="home-search-hint">Searching…</div>}
+
+            {query.trim().length > 0 && results.length > 0 && (
+              <div className="home-search-dropdown">
+                {results.slice(0, 12).map((sym) => (
+                  <button
+                    key={sym}
+                    className="home-search-option"
+                    onClick={() => {
+                      goToSymbol(sym);
+                      setQuery("");
+                    }}
+                    type="button"
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="home-popular">
+            <div className="home-popular-label">Popular</div>
+            <div className="home-popular-tabs">
+              {POPULAR.map((sym) => (
+                <button
+                  key={sym}
+                  className={
+                    sym === activePopular ? "home-tab active" : "home-tab"
+                  }
+                  onClick={() => {
+                    setActivePopular(sym);
+                    goToSymbol(sym);
+                  }}
+                  type="button"
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {!isAuthenticated && (
-            <button onClick={handleGetStarted} className="cta-button">
-              Get Started
-            </button>
+            <div className="home-cta-row">
+              <button onClick={handleGetStarted} className="cta-button">
+                Get Started
+              </button>
+            </div>
           )}
         </div>
       </div>
-
-      <div className="home-content">
-        <div className="market-section">
-          <h3>Market Overview</h3>
-          <div className="market-placeholder">
-            <p>Real-time market data will be displayed here</p>
-            <p className="coming-soon">Coming soon: Live prices, charts, and market trends</p>
-          </div>
-        </div>
-
-        <div className="features-section">
-          <h3>Features</h3>
-          <div className="features-grid">
-            <div className="feature-card">
-              <h4>Real-time Market Data</h4>
-              <p>Access live stock prices and market information</p>
-            </div>
-            <div className="feature-card">
-              <h4>Virtual Trading</h4>
-              <p>Practice buying and selling stocks with virtual money</p>
-            </div>
-            <div className="feature-card">
-              <h4>Portfolio Tracking</h4>
-              <p>Monitor your positions and track your performance</p>
-            </div>
-            <div className="feature-card">
-              <h4>Risk Management</h4>
-              <p>Learn to manage risk with built-in risk controls</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   );
 }
-
