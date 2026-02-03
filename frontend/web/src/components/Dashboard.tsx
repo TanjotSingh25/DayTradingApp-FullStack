@@ -9,8 +9,8 @@ export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    "wallet" | "profile" | "preferences"
-  >("wallet");
+    "profile" | "preferences"
+  >("profile");
 
   const handleLogout = () => {
     logout();
@@ -24,7 +24,7 @@ export default function Dashboard() {
           <button onClick={() => navigate("/")} className="home-button">
             ← Home
           </button>
-          <h1>Day Trading Simulator</h1>
+          <h1>Account Settings</h1>
         </div>
         <div className="user-info">
           <span>Welcome, {user?.name || user?.username}!</span>
@@ -35,10 +35,10 @@ export default function Dashboard() {
       </div>
       <div className="dashboard-nav">
         <button
-          className={activeTab === "wallet" ? "nav-tab active" : "nav-tab"}
-          onClick={() => setActiveTab("wallet")}
+          className={activeTab === "profile" ? "nav-tab active" : "nav-tab"}
+          onClick={() => setActiveTab("profile")}
         >
-          Wallet
+          Profile
         </button>
         <button
           className={activeTab === "preferences" ? "nav-tab active" : "nav-tab"}
@@ -46,31 +46,8 @@ export default function Dashboard() {
         >
           Preferences
         </button>
-        <button
-          className={activeTab === "profile" ? "nav-tab active" : "nav-tab"}
-          onClick={() => setActiveTab("profile")}
-        >
-          Profile
-        </button>
       </div>
       <div className="dashboard-content">
-        {activeTab === "wallet" && (
-          <div className="welcome-card">
-            <h2>Wallet</h2>
-            <p>
-              This is where your wallet and trading features will be
-              implemented.
-            </p>
-            <p>Coming soon:</p>
-            <ul>
-              <li>Account balance</li>
-              <li>Real-time market data</li>
-              <li>Order placement</li>
-              <li>Portfolio management</li>
-              <li>Risk analytics</li>
-            </ul>
-          </div>
-        )}
         {activeTab === "profile" && <UserProfile />}
         {activeTab === "preferences" && <UserPreferences />}
       </div>

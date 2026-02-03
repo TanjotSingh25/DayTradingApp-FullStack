@@ -25,6 +25,9 @@ The system is designed with scalability and modularity in mind using **Docker**,
 2. **Access the application:**
    - Frontend: http://localhost:3000
    - Auth Service API: http://localhost:8080
+   - Portfolio Service API: http://localhost:8002
+   - Market Data Service API: http://localhost:8000
+   - Portfolio Dashboard: http://localhost:3000/portfolio (after login)
 
 3. **Stop all services:**
    ```bash
@@ -41,6 +44,18 @@ npm run dev
 ```
 The frontend will be available at http://localhost:5173 (Vite default port)
 
+**Environment Variables:**
+- `VITE_PORTFOLIO_HTTP_BASE` - Portfolio Service URL (default: `http://localhost:8002`)
+- `VITE_MARKET_DATA_HTTP_BASE` - Market Data Service URL (default: `http://localhost:8000`)
+- `VITE_API_BASE_URL` - Auth Service URL (default: `http://localhost:8080`)
+
+Create a `.env` file in `frontend/web/` to override defaults:
+```env
+VITE_PORTFOLIO_HTTP_BASE=http://localhost:8002
+VITE_MARKET_DATA_HTTP_BASE=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:8080
+```
+
 #### Authentication Service
 The authentication service runs in Docker. To rebuild after changes:
 ```bash
@@ -54,15 +69,34 @@ docker-compose up --build auth-service
    - Login and registration pages
    - Protected routes with JWT authentication
    - Responsive UI with modern design
+   - Portfolio Dashboard for account management
 
 2. **Authentication Service (Golang)**
    - User registration and login
    - JWT-based session management
    - MongoDB for user data storage
    - RESTful API endpoints
+   - Automatically creates portfolio accounts on registration
 
-3. **MongoDB**
+3. **Portfolio Service (FastAPI + PostgreSQL)**
+   - Account balance management (cash available/reserved)
+   - Position tracking (holdings per ticker)
+   - Transaction ledger (audit trail)
+   - Deposit/withdraw functionality
+   - RESTful API endpoints
+   - Port: 8002
+
+4. **Market Data Service (FastAPI + PostgreSQL)**
+   - Historical candlestick data
+   - WebSocket real-time replay
+   - Symbol search and listing
+   - Port: 8000
+
+5. **MongoDB**
    - Database for authentication service
+
+6. **PostgreSQL (TimescaleDB)**
+   - Database for market data and portfolio data
 
 ### 🔧 Planned Microservices
 
@@ -107,6 +141,25 @@ day-trading-simulator/
 - `POST /login` - Login user (returns: token, username)
 - `GET /authinfo/{username}` - Get user info (requires JWT)
 - `PUT /authinfo/update` - Update user info (requires JWT)
+
+## 💼 Portfolio Service API Endpoints
+
+All endpoints require `Authorization: Bearer <JWT>` header.
+
+**Account:**
+- `GET /api/v1/account/summary` - Get account summary (cash balances)
+- `POST /api/v1/account/deposit` - Deposit funds (`{ amount_cents, note? }`)
+- `POST /api/v1/account/withdraw` - Withdraw funds (`{ amount_cents, note? }`)
+
+**Positions:**
+- `GET /api/v1/positions` - List all positions
+- `GET /api/v1/positions/{ticker}` - Get specific position
+
+**Ledger:**
+- `GET /api/v1/ledger` - Get transaction history
+  - Query params: `limit`, `type`, `from`, `to`, `cursor`
+
+See `portfolio-service/README.md` for full API documentation.
 
 ## 🛠️ Tech Stack
 

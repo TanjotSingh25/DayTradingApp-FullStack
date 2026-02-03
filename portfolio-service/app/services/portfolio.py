@@ -251,6 +251,35 @@ def withdraw(conn: psycopg.Connection, user_id: str, amount_cents: int, note: Op
             ), ledger_id
 
 
+def init_account(conn: psycopg.Connection, user_id: str) -> tuple[bool, dict[str, Any]]:
+    """
+    Initialize a portfolio account for a user.
+    Idempotent: if account already exists, returns existing account.
+    Returns: (created: bool, summary: dict)
+    """
+    logger.info("init_account user_id=%s", user_id)
+    with conn.transaction():
+        with conn.cursor(row_factory=dict_row) as cur:
+            # Check if account already exists
+            cur.execute(
+                "SELECT user_id, cash_available_cents, cash_reserved_cents, created_at, updated_at FROM accounts WHERE user_id = %s",
+                (user_id,),
+            )
+            existing = cur.fetchone()
+            if existing:
+                # Account already exists, return it
+                acct = AccountRow(**existing)
+                return False, account_summary_from_row(
+                    acct.user_id, acct.cash_available_cents, acct.cash_reserved_cents, acct.updated_at
+                )
+            
+            # Create new account with zero balance
+            acct = _ensure_account_for_update(cur, user_id)
+            return True, account_summary_from_row(
+                acct.user_id, acct.cash_available_cents, acct.cash_reserved_cents, acct.updated_at
+            )
+
+
 def get_summary(conn: psycopg.Connection, user_id: str) -> dict[str, Any]:
     with conn.cursor(row_factory=dict_row) as cur:
         cur.execute(

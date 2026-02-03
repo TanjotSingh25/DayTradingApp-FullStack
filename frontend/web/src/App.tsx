@@ -6,6 +6,7 @@ import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import SymbolPage from './pages/SymbolPage';
+import PortfolioDashboardPage from './pages/PortfolioDashboardPage';
 import './App.css';
 
 function App() {
@@ -21,6 +22,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/portfolio"
+            element={
+              <ProtectedRoute>
+                <PortfolioDashboardPage />
               </ProtectedRoute>
             }
           />

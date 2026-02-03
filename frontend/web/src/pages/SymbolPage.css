@@ -46,6 +46,19 @@
   color: #94a3b8;
 }
 
+.symbol-current-price {
+  font-size: 32px;
+  font-weight: 800;
+  color: #60a5fa;
+  margin-top: 8px;
+  letter-spacing: -0.5px;
+}
+
+.symbol-note {
+  margin-top: 6px;
+  color: rgba(226, 232, 240, 0.85);
+}
+
 .symbol-status {
   font-size: 13px;
   color: #cbd5e1;
@@ -55,16 +68,61 @@
   color: #f87171;
 }
 
-.symbol-chart {
+.symbol-content-grid {
   max-width: 1400px;
-  margin: 18px auto 0;
-  padding: 0 40px 40px;
+  margin: 0 auto;
+  padding: 18px 40px 40px;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+.symbol-chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.symbol-chart {
+  margin: 0;
+  padding: 0;
 }
 
 .symbol-header-right {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.symbol-speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.symbol-speed-select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.symbol-speed-select:hover {
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+.symbol-speed-select:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.7);
 }
 
 .symbol-volume-toggle {
@@ -84,9 +142,16 @@
 }
 
 .symbol-volume {
-  max-width: 1400px;
-  margin: 0 auto 0;
-  padding: 0 40px 40px;
+  margin: 0;
+  padding: 0 0 40px 0;
+}
+
+.symbol-trading-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 20px;
 }
 
 .symbol-placeholder {
@@ -106,14 +171,48 @@
   overflow: hidden;
 }
 
+@media (max-width: 1200px) {
+  .symbol-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .symbol-trading-section {
+    position: static;
+  }
+}
+
 @media (max-width: 768px) {
   .symbol-page-header {
     padding: 16px 18px;
   }
-  .symbol-chart {
-    padding: 0 18px 30px;
+
+  .symbol-content-grid {
+    padding: 18px 18px 40px;
   }
+
+  .symbol-chart {
+    padding: 0;
+  }
+
   .symbol-volume {
-    padding: 0 18px 24px;
+    padding: 0 0 24px 0;
+  }
+
+  .symbol-current-price {
+    font-size: 24px;
+  }
+
+  .symbol-header-right {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .symbol-speed-control {
+    width: 100%;
+  }
+
+  .symbol-speed-select {
+    flex: 1;
   }
 }

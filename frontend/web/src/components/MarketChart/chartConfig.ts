@@ -1,4 +1,4 @@
-export const DEFAULT_REPLAY_STEP_SECONDS = 2;
+export const DEFAULT_REPLAY_STEP_SECONDS = 10; // Slower default for better UX
 export const DEFAULT_TIMEFRAME_MINUTES = 5;
 
 // Visual spacing between candlesticks (higher = more gap)

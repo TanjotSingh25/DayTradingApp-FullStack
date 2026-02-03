@@ -123,3 +123,12 @@ class ReleaseCashResponse(BaseModel):
     ledger_entry_id: str
 
 
+class InitAccountRequest(BaseModel):
+    user_id: str
+
+
+class InitAccountResponse(BaseModel):
+    created: bool
+    summary: AccountSummary
+
+

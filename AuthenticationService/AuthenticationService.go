@@ -20,7 +20,9 @@ import (
 
 var jwtKey = []byte("supersecretkey") // Use env variable in production
 var userServiceURL = getEnv("USER_SERVICE_URL", "http://user-service:8081")
+var portfolioServiceURL = getEnv("PORTFOLIO_SERVICE_URL", "http://portfolio-service:8002")
 var serviceSecret = getEnv("SERVICE_SECRET", "service-secret-key")
+var internalApiKey = getEnv("INTERNAL_API_KEY", "some-secret")
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
@@ -153,6 +155,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create user profile in user service (non-blocking)
 	go createUserProfile(creds.Username, creds.Name)
+	
+	// Initialize portfolio account (non-blocking)
+	go initPortfolioAccount(creds.Username)
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User registered successfully"))
@@ -196,6 +201,42 @@ func createUserProfile(username, name string) {
 	}
 
 	log.Printf("Successfully created user profile for %s", username)
+}
+
+func initPortfolioAccount(username string) {
+	accountData := map[string]interface{}{
+		"user_id": username,
+	}
+
+	jsonData, err := json.Marshal(accountData)
+	if err != nil {
+		log.Printf("Error marshaling portfolio account data: %v", err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", portfolioServiceURL+"/internal/init-account", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Error creating request to portfolio service: %v", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Internal-Api-Key", internalApiKey)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error calling portfolio service: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Portfolio service returned status %d when initializing account for %s", resp.StatusCode, username)
+		return
+	}
+
+	log.Printf("Successfully initialized portfolio account for %s", username)
 }
 
 // GET /authinfo/{username} (internal use only)

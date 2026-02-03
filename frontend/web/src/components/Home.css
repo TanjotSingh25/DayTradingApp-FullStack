@@ -120,18 +120,19 @@
 }
 
 .home-content {
+  height: 80vh;
   max-width: 1400px;
   margin: 0 auto;
   padding: 32px 40px 60px;
 }
 
 .home-picker {
-  min-height: calc(100vh - 140px);
+  height: 60vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 18px;
-  padding: 10px 0 40px;
+  padding: 10px 0 20px;
 }
 
 .home-picker-title {

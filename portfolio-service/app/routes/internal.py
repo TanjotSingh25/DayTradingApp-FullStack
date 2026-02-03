@@ -9,8 +9,10 @@ from app.models import (
     ReserveCashResponse,
     ReleaseCashRequest,
     ReleaseCashResponse,
+    InitAccountRequest,
+    InitAccountResponse,
 )
-from app.services.portfolio import ConflictError, apply_execution, reserve_cash, release_cash
+from app.services.portfolio import ConflictError, apply_execution, reserve_cash, release_cash, init_account
 
 
 router = APIRouter()
@@ -49,6 +51,21 @@ def internal_release_cash(req: ReleaseCashRequest, _: None = Depends(require_int
         return result
     except ConflictError as e:
         raise HTTPException(status_code=409, detail={"error": e.code, "message": e.message})
+    finally:
+        conn.close()
+
+
+@router.post("/internal/init-account", response_model=InitAccountResponse)
+def internal_init_account(req: InitAccountRequest, _: None = Depends(require_internal_key)):
+    """
+    Initialize a portfolio account for a user.
+    Idempotent: if account already exists, returns existing account.
+    Called by auth-service after user registration.
+    """
+    conn = get_conn()
+    try:
+        created, summary = init_account(conn, req.user_id)
+        return InitAccountResponse(created=created, summary=summary)
     finally:
         conn.close()
 

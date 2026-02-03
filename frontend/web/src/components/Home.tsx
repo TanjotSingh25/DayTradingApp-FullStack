@@ -65,7 +65,13 @@ export default function Home() {
                   onClick={() => navigate("/dashboard")}
                   className="nav-button"
                 >
-                  Dashboard
+                  Settings
+                </button>
+                <button
+                  onClick={() => navigate("/portfolio")}
+                  className="nav-button"
+                >
+                  Portfolio
                 </button>
                 <button
                   onClick={() => {

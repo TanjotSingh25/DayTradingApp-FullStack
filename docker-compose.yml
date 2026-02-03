@@ -27,7 +27,9 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017
       - USER_SERVICE_URL=http://user-service:8081
+      - PORTFOLIO_SERVICE_URL=http://portfolio-service:8002
       - SERVICE_SECRET=service-secret-key
+      - INTERNAL_API_KEY=some-secret
     networks:
       - backend
     restart: unless-stopped
@@ -116,6 +118,29 @@ services:
       - INTERNAL_API_KEY=some-secret
       - JWT_SECRET=supersecretkey
       - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+    networks:
+      - backend
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "8003:8003"
+    depends_on:
+      - postgres
+      - portfolio-service
+      - auth-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/trading
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - PORTFOLIO_INTERNAL_BASE=http://portfolio-service:8002
+      - PORTFOLIO_INTERNAL_KEY=some-secret
+      - JWT_SECRET=supersecretkey
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+      - SERVICE_PORT=8003
     networks:
       - backend
     restart: unless-stopped

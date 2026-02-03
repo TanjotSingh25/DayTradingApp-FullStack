@@ -1,0 +1,164 @@
+.order-ticket {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.order-ticket-title {
+  margin: 0 0 16px 0;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.order-ticket-auth-warning {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.order-ticket-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.order-ticket-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-ticket-row label {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-ticket-row input {
+  padding: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1em;
+  transition: border-color 0.2s;
+}
+
+.order-ticket-row input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.order-ticket-row input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.order-ticket-hint {
+  font-size: 0.85em;
+  color: #64748b;
+  font-weight: normal;
+}
+
+.order-ticket-quantity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.order-ticket-estimated-cost {
+  font-size: 0.85em;
+  color: #3b82f6;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.order-ticket-button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.order-ticket-btn {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.order-ticket-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.order-ticket-btn.active {
+  border-color: #3b82f6;
+  background: #3b82f6;
+  color: white;
+}
+
+.order-ticket-btn.active.buy {
+  background: #059669;
+  border-color: #059669;
+}
+
+.order-ticket-btn.active.sell {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.order-ticket-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.order-ticket-message {
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.order-ticket-message-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.order-ticket-message-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.order-ticket-submit {
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.order-ticket-submit:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.order-ticket-submit:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
